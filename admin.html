@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VulnBoard - 管理画面</title>
+    <link rel="stylesheet" href="css/style.css">
+    <style>
+        .admin-header { background-color: #800000; color: white; padding: 10px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header admin-header">
+            <h1>VulnBoard 管理画面</h1>
+            <p>Admin Access Only</p>
+        </div>
+
+        <div class="nav">
+            <a href="index.html">ホーム</a>
+            <a href="#" onclick="Auth.logout()">ログアウト</a>
+        </div>
+
+        <h2>全スレッド管理</h2>
+
+        <table class="thread-list">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>タイトル</th>
+                    <th>作成者</th>
+                    <th>操作</th>
+                </tr>
+            </thead>
+            <tbody id="admin-thread-table">
+            </tbody>
+        </table>
+    </div>
+
+    <script src="js/utils.js"></script>
+    <script src="js/store.js"></script>
+    <script src="js/auth.js"></script>
+    <script>
+        // VULNERABILITY: Client-side Access Control
+        // If (isAdmin) check is done here. An attacker can just modify localStorage.
+        if (!Auth.isAdmin()) {
+            alert('アクセス権限がありません。');
+            window.location.href = 'index.html';
+        }
+
+        const threads = Store.getThreads();
+        const tbody = document.getElementById('admin-thread-table');
+
+        threads.forEach(thread => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td>${thread.threadId}</td>
+                <td>${thread.title}</td> <!-- VULNERABILITY: still XSS here too -->
+                <td>${thread.authorName}</td>
+                <td><button onclick="deleteThread('${thread.threadId}')">削除</button></td>
+            `;
+            tbody.appendChild(tr);
+        });
+
+        function deleteThread(id) {
+            if (confirm('本当に削除しますか？')) {
+                // VULNERABILITY: No server-side check (obviously, since no server), 
+                // but conceptually this request would lack a CSRF token.
+                Store.deleteThread(id);
+                location.reload();
+            }
+        }
+    </script>
+</body>
+</html>

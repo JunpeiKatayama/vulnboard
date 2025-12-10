@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VulnBoard - プロフィール編集</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>VulnBoard</h1>
+            <p>Vulnerable Message Board System</p>
+        </div>
+
+        <div class="nav">
+            <a href="index.html">ホーム</a>
+            <a href="#" onclick="Auth.logout()">ログアウト</a>
+        </div>
+
+        <h2>プロフィール編集</h2>
+
+        <div id="message" class="error-message"></div>
+
+        <div class="form-group">
+            <label>ユーザーID:</label>
+            <span id="userIdDisplay"></span>
+        </div>
+
+        <div class="form-group">
+            <label for="username">ユーザー名:</label>
+            <input type="text" id="username" disabled> <!-- Username cannot be changed easily -->
+        </div>
+
+        <div class="form-group">
+            <label for="email">メールアドレス:</label>
+            <input type="text" id="email">
+        </div>
+
+        <div class="form-group">
+            <label for="password">パスワード:</label>
+            <input type="text" id="password" placeholder="変更する場合のみ入力"> <!-- VULNERABILITY: Plain text display potential if populated -->
+        </div>
+
+        <button onclick="handleUpdate()">更新</button>
+    </div>
+
+    <script src="js/utils.js"></script>
+    <script src="js/store.js"></script>
+    <script src="js/auth.js"></script>
+    <script>
+        // Ensure logged in
+        Auth.requireLogin();
+        const currentUser = Auth.getCurrentUser();
+        // Fetch full user data including email/password from store
+        const fullUserData = Store.findUser(currentUser.username);
+
+        // Populate fields
+        document.getElementById('userIdDisplay').innerText = fullUserData.userId;
+        document.getElementById('username').value = fullUserData.username;
+        document.getElementById('email').value = fullUserData.email;
+        // Not populating password for usability, but could leak it in console easily
+
+        function handleUpdate() {
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            
+            const updatedUser = {
+                ...fullUserData,
+                email: email
+            };
+
+            if (password) {
+                updatedUser.password = password;
+            }
+
+            Store.updateUser(updatedUser);
+            
+            // If email/other non-session critical info changes, session is fine.
+            // But if we changed username (disabled here), we'd need to re-login.
+            
+            alert('プロフィールを更新しました。');
+            location.reload();
+        }
+    </script>
+</body>
+</html>

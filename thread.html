@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VulnBoard - スレッド詳細</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>VulnBoard</h1>
+            <p>Vulnerable Message Board System</p>
+        </div>
+
+        <div class="nav">
+            <a href="index.html">ホーム</a>
+        </div>
+
+        <div id="thread-container">
+            <!-- Thread details go here -->
+        </div>
+
+        <div id="reply-form" class="form-group" style="margin-top: 30px; border-top: 1px solid #ccc; padding-top: 20px;">
+            <h3>返信を投稿</h3>
+            <textarea id="reply-content" rows="5" style="width: 100%; box-sizing: border-box;"></textarea>
+            <button onclick="handleReply()" style="margin-top: 10px;">書き込む</button>
+        </div>
+        
+        <!-- VULNERABILITY: DOM-based XSS hidden output -->
+        <div id="debug-output" style="display:none;"></div>
+    </div>
+
+    <script src="js/utils.js"></script>
+    <script src="js/store.js"></script>
+    <script src="js/auth.js"></script>
+    <script>
+        // DOM-based XSS: Check hash and do something dangerous
+        if (location.hash) {
+            const debugDiv = document.getElementById('debug-output');
+            // Directly putting hash into innerHTML can trigger scripts
+            debugDiv.innerHTML = decodeURIComponent(location.hash.substring(1));
+        }
+
+        const threadId = Utils.getParam('id');
+        const thread = Store.getThread(threadId);
+
+        if (!thread) {
+            document.getElementById('thread-container').innerText = 'スレッドが見つかりません。';
+            document.getElementById('reply-form').style.display = 'none';
+        } else {
+            const container = document.getElementById('thread-container');
+            
+            // VULNERABILITY: innerHTML XSS in Title, Metadata, Content
+            let html = `
+                <div class="thread">
+                    <div class="thread-header">${thread.title}</div> 
+                    <div class="thread-meta">
+                        投稿者: ${thread.authorName} - ${Utils.formatDate(thread.createdAt)}
+                    </div>
+                    <div class="thread-content">
+                        ${thread.content} 
+                    </div>
+                </div>
+                <h3>返信一覧</h3>
+                <div class="replies">
+            `;
+
+            if (thread.replies && thread.replies.length > 0) {
+                thread.replies.forEach(reply => {
+                    // VULNERABILITY: innerHTML XSS in Reply
+                    html += `
+                        <div class="reply">
+                            <div class="thread-meta">
+                                ${reply.authorName} - ${Utils.formatDate(reply.createdAt)}
+                            </div>
+                            <div>${reply.content}</div> 
+                        </div>
+                    `;
+                });
+            } else {
+                html += '<p>まだ返信はありません。</p>';
+            }
+
+            html += '</div>';
+            container.innerHTML = html;
+        }
+
+        function handleReply() {
+            if (!Auth.getCurrentUser()) {
+                alert('返信するにはログインが必要です。');
+                window.location.href = 'login.html';
+                return;
+            }
+
+            const content = document.getElementById('reply-content').value;
+            if (!content) return;
+
+            const currentUser = Auth.getCurrentUser();
+            const reply = {
+                replyId: Utils.generateId(),
+                content: content,
+                authorId: currentUser.userId,
+                authorName: currentUser.username, 
+                createdAt: Date.now()
+            };
+
+            Store.addReply(threadId, reply);
+            location.reload();
+        }
+    </script>
+</body>
+</html>

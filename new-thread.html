@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VulnBoard - 新規スレッド</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>VulnBoard</h1>
+            <p>Vulnerable Message Board System</p>
+        </div>
+
+        <div class="nav">
+            <a href="index.html">ホーム</a>
+        </div>
+
+        <h2>新規スレッド作成</h2>
+
+        <div class="form-group">
+            <label for="title">タイトル:</label>
+            <input type="text" id="title" style="width: 100%; box-sizing: border-box;">
+        </div>
+
+        <div class="form-group">
+            <label for="content">内容:</label>
+            <textarea id="content" rows="10" style="width: 100%; box-sizing: border-box;"></textarea>
+        </div>
+
+        <button onclick="handleCreateThread()">作成</button>
+    </div>
+
+    <script src="js/utils.js"></script>
+    <script src="js/store.js"></script>
+    <script src="js/auth.js"></script>
+    <script>
+        Auth.requireLogin();
+        const currentUser = Auth.getCurrentUser();
+
+        function handleCreateThread() {
+            const title = document.getElementById('title').value;
+            const content = document.getElementById('content').value;
+
+            if (!title || !content) {
+                alert('タイトルと内容を入力してください。');
+                return;
+            }
+
+            const newThread = {
+                threadId: Utils.generateId(),
+                title: title,
+                content: content,
+                authorId: currentUser.userId,
+                authorName: currentUser.username,
+                createdAt: Date.now(),
+                replies: []
+            };
+
+            Store.saveThread(newThread);
+            window.location.href = 'index.html';
+        }
+    </script>
+</body>
+</html>
